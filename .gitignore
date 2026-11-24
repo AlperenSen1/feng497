@@ -1,0 +1,10 @@
+# Python ortamı (her bilgisayarda yeniden kurulur)
+.venv/
+__pycache__/
+*.pyc
+
+# CWRU verisi (açık yeniden dağıtım lisansı yok; resmi siteden indirilir)
+data/
+
+# FELA-PdM modeli (Hugging Face'ten indirilir)
+fela-pdm/
