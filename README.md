@@ -1,7 +1,38 @@
-# feng: CWRU rulman arıza analizi
+# Rulman Arıza Kontrolü
 
-Bir CWRU rulman titreşim kaydını (`.mat`) alır, 2048 örneklik pencerelere böler, hazır
-[FELA-PdM](https://huggingface.co/lowdown-labs/fela-pdm) modeline verir ve şunları yazar:
+Bu program, bir rulmanın titreşim kaydına bakar ve rulmanda arıza belirtisi olup olmadığını söyler.
+
+Windows bilgisayarlarda çalışır. Programı size veren kişi kurulumu yaptıysa aşağıdaki adımlar yeterlidir.
+
+> **Not:** Bu program bir deneme ve gösteri çalışmasıdır. Sonuçlar tek başına bir bakım kararı vermek için kullanılmamalıdır.
+
+## Kullanmak için 4 adım
+
+### 1. Siyah komut penceresini açın
+
+1. Program klasörünü açın. İçinde `feng.bat` dosyasını göreceksiniz.
+2. Klasörün üstündeki adres çubuğuna (klasör yolunun yazdığı yere) tıklayın.
+3. `cmd` yazın ve **Enter** tuşuna basın.
+
+Siyah bir pencere açılır. Bu pencere doğru klasörde açılmıştır.
+
+### 2. Programı başlatın
+
+Siyah pencereye şunu yazın ve **Enter** tuşuna basın:
+
+```
+feng run
+```
+
+Ekranda `Dosya yolu:` yazısı çıkar. İlk seferde birkaç saniye beklemeniz gerekebilir.
+
+### 3. Kontrol edilecek dosyayı gösterin
+
+Kontrol etmek istediğiniz kayıt dosyasını (`.mat` ile biten dosya) fare ile tutup siyah pencerenin içine bırakın. Dosyanın adresi kendiliğinden yazılır. Sonra **Enter** tuşuna basın.
+
+### 4. Sonucu okuyun
+
+Birkaç saniye içinde şuna benzer bir sonuç çıkar:
 
 ```
 Dosya                   : IR007_0.mat
@@ -10,86 +41,37 @@ Seviye                  : Çok güçlü arıza belirtisi
 En olası arıza türü     : İç halka [sağlıksız pencerelerdeki payı: %100.0]
 ```
 
-Bu bir simülasyon/demo projesidir. Gerçek sensör verisiyle test edilmedi.
-
-## Nasıl çalışır
-
-1. `.mat` dosyasından sürücü ucu (`DE_time`) titreşim sinyali okunur.
-2. Sinyal 2048 örneklik, 1024 kaydırmalı pencerelere bölünür.
-3. Model her pencereye 10 sınıftan birini verir (sağlam + 3 arıza türü x 3 hasar boyutu).
-4. Sınıf 0 (sağlam) olmayan pencerelerin oranı hesaplanır.
-5. Orana göre seviye belirlenir. En olası arıza türü (iç halka, bilya, dış halka), oran
-   %30 ve üzerindeyse yazılır. Hasar boyutları türde birleştirilir.
-
-| Sağlıksız pencere oranı | Seviye |
+| Satır | Ne demek |
 |---|---|
-| %0–10 | Normal |
-| %10–30 | İzlenmeli (hafif belirti) |
-| %30–60 | Olası arıza |
-| %60–90 | Güçlü arıza belirtisi |
-| %90 ve üstü | Çok güçlü arıza belirtisi |
+| **Dosya** | Kontrol ettiğiniz dosyanın adı. |
+| **Sağlıksız pencere oranı** | Kayıt küçük parçalara bölünüp tek tek incelenir. Bu sayı, parçaların yüzde kaçında arıza belirtisi görüldüğünü gösterir. Sayı yükseldikçe belirti artar. Bu bir "arıza olma ihtimali" değildir. |
+| **Seviye** | Sonucun kısa özeti. Aşağıdaki tabloya bakın. |
+| **En olası arıza türü** | Belirti varsa, rulmanın hangi bölümünde olabileceğini söyler: iç halka, bilya veya dış halka. Köşeli parantezdeki yüzde, belirti gösteren parçaların ne kadarının bu türü işaret ettiğini gösterir. Yüzde yükseldikçe sonuç daha tutarlıdır. |
 
-Bu bantlar örnek değerlerdir, veriyle doğrulanmadı. Oran bir arıza olasılığı ya da kalan ömür
-tahmini değildir, modelin pencerelerin yüzde kaçında anormallik gördüğünü gösterir.
+Bu son satır sadece seviye **"Olası arıza"** veya daha yüksekse görünür.
 
-## Kurulum (Windows, CMD)
+**Seviyeler ne anlama gelir?**
 
-Python 3.12 gerekir.
-
-```bat
-python -m venv .venv
-.venv\Scripts\python.exe -m pip install torch --index-url https://download.pytorch.org/whl/cpu
-.venv\Scripts\python.exe -m pip install numpy scipy safetensors huggingface_hub
-```
-
-Modeli indir (`fela-pdm` klasörüne):
-
-```bat
-.venv\Scripts\python.exe -c "from huggingface_hub import snapshot_download; snapshot_download('lowdown-labs/fela-pdm', local_dir='fela-pdm')"
-```
-
-CWRU verisini resmi siteden indir: <https://engineering.case.edu/bearingdatacenter>
-(12 kHz sürücü ucu ve normal veri sayfaları). Dosyalar `https://engineering.case.edu/sites/default/files/<numara>.mat`
-adresinden indirilir. Program `DE_time` sinyali içeren herhangi bir CWRU `.mat` dosyasını okur.
-Eğitim setiyle aynı 40 dosyayı kullanmak için (dış bilezik: saat 6 konumu):
-
-| Sınıf | Yük 0, 1, 2, 3 dosya numaraları |
+| Seviye | Anlamı |
 |---|---|
-| Normal | 97–100 |
-| İç bilezik 0.007 / 0.014 / 0.021 | 105–108 / 169–172 / 209–212 |
-| Bilya 0.007 / 0.014 / 0.021 | 118–121 / 185–188 / 222–225 |
-| Dış bilezik 0.007 / 0.014 / 0.021 | 130–133 / 197–200 / 234–237 |
+| Normal | Arıza belirtisi görülmedi. |
+| İzlenmeli (hafif belirti) | Hafif belirtiler var. Takip edilmesi iyi olur. |
+| Olası arıza | Arıza olabilir. Kontrol edilmesi önerilir. |
+| Güçlü arıza belirtisi | Belirtiler belirgin. Kontrol edilmesi önerilir. |
+| Çok güçlü arıza belirtisi | Belirtiler çok belirgin. Kontrol edilmesi önerilir. |
 
-## Kullanım
+## Başka bir dosyayı kontrol etmek
 
-```bat
-feng run
-```
+2. adımdan tekrar başlayın. Kolaylık için klavyedeki **yukarı ok** tuşuna basıp **Enter**'a basarsanız `feng run` yeniden yazılır.
 
-Program "Dosya yolu:" diye sorar, yolu ayrı satıra yazarsın. Doğrudan da verilebilir:
+## Bir sorun olursa
 
-```bat
-feng run C:\yol\dosya.mat
-```
+| Ekranda ne yazıyor | Ne yapmalı |
+|---|---|
+| `feng` tanınmıyor gibi bir yazı | Siyah pencere program klasöründe açılmamıştır. 1. adımı tekrar yapın. |
+| Dosya bulunamadı | Dosyayı siyah pencereye yeniden sürükleyip bırakın. |
+| Dosyayla ilgili başka bir hata | Bu program yalnızca rulman titreşim kaydı olan `.mat` dosyalarını okuyabilir. Başka bir dosya deneyin. |
 
-(`feng.bat` proje klasöründeyken çalışır. Aynı iş için:
-`.venv\Scripts\python.exe predict_file.py [dosya.mat]`.)
+## Kaynaklar
 
-## Sınırlılıklar
-
-- Model CWRU ile eğitildi. CWRU'daki yaygın pencere bölme yönteminde aynı kayıttan pencereler hem
-  eğitimde hem testte yer alır, bu yüzden CWRU üzerindeki neredeyse kusursuz sonuçlar iyimserdir ve
-  başarı kanıtı sayılmamalıdır. Farklı yük veya hasar boyutuna genelleme test edilmedi.
-- Modelin "bilinmeyen" sınıfı yoktur. Saf rastgele gürültüyü bile yüksek güvenle bir arıza
-  sınıfına atadığını gözlemledik. Bu yüzden modelin güven değeri tek başına güvenilir değildir.
-- Normal kayıtlar arıza kayıtlarından 2–4 kat uzundur ve 48 kHz'de kaydedilmiş olabilir
-  (doğrulanmadı). Doğruysa model "sağlam"ı kayıt farkından da ayırıyor olabilir.
-- Gerçek sensör verisi kullanılmadı. Bu bir güvenlik denetleyicisi ya da bakım kararı için tek
-  başına dayanak değildir.
-
-## Lisans ve atıflar
-
-- Model: FELA-PdM, Lowdown Labs, "Lowdown Labs Lovely License 1.0" (CC BY-NC 4.0 + Hippocratic
-  License 3.0). Ticari kullanım yoktur. Model bu depoda dağıtılmaz.
-- Veri: Case Western Reserve University Bearing Data Center. Veri setinde açık bir kullanım
-  lisansı yayımlanmamıştır, bu depoda dağıtılmaz.
+Bu program, Case Western Reserve University'nin rulman titreşim verisi ve Lowdown Labs'in FELA-PdM yapay zekâ modeli ile çalışır. Ticari amaçla kullanılamaz.
