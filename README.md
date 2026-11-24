@@ -6,6 +6,28 @@ Windows bilgisayarlarda çalışır. Programı size veren kişi kurulumu yaptıy
 
 > **Not:** Bu program bir deneme ve gösteri çalışmasıdır. Sonuçlar tek başına bir bakım kararı vermek için kullanılmamalıdır.
 
+## Başlamadan önce: 2 şeyi indirin
+
+Programın çalışması için bir yapay zekâ modeline ve kontrol edilecek kayıt dosyalarına ihtiyaç vardır. İkisini de internetten indirmeniz gerekir. Model dosyalarını bir kez indirmeniz yeterlidir.
+
+### A. Yapay zekâ modeli
+
+1. Şu sayfayı açın: <https://huggingface.co/lowdown-labs/fela-pdm>
+2. Sayfadaki **Files and versions** (veya **Files**) sekmesine tıklayın.
+3. Şu 3 dosyayı tek tek indirin (her dosyanın yanında aşağı ok işareti vardır):
+   - `config.json`
+   - `modeling.py`
+   - `cwru.safetensors`
+4. Program klasörünün içinde `fela-pdm` adında yeni bir klasör açın ve bu 3 dosyayı içine koyun.
+
+### B. Kontrol edilecek kayıt dosyaları
+
+1. Şu siteyi açın: <https://engineering.case.edu/bearingdatacenter>
+2. Sitedeki **12k Drive End Bearing Fault Data** (arızalı rulman kayıtları) veya **Normal Baseline Data** (sağlam rulman kayıtları) sayfasını açın.
+3. Tablodaki dosya adlarına (örneğin `IR007_0`) tıklayarak dosyaları indirin. İnen dosyanın adı `105.mat` gibi bir sayı olabilir, sorun değildir.
+
+Dosyaları istediğiniz klasöre indirebilirsiniz. 3. adımda dosyayı programa kendiniz göstereceksiniz.
+
 ## Kullanmak için 4 adım
 
 ### 1. Siyah komut penceresini açın
