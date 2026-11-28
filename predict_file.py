@@ -21,10 +21,10 @@ MODEL_DIR = ROOT / "fela-pdm"
 sys.path.insert(0, str(MODEL_DIR))
 from modeling import load_model, preprocess_cwru  # noqa: E402
 
-WINDOW = 2048       # modelin beklediği pencere uzunluğu (örnek sayısı)
-STRIDE = 1024       # eğitimdeki gibi %50 örtüşme
-BATCH = 64          # modele aynı anda verilen pencere sayısı
-HEALTHY_CLASS = 0   # model çıktısında sınıf 0 = Normal (sağlıklı)
+WINDOW = 2048  # modelin beklediği pencere uzunluğu (örnek sayısı)
+STRIDE = 1024  # eğitimdeki gibi %50 örtüşme
+BATCH = 64  # modele aynı anda verilen pencere sayısı
+HEALTHY_CLASS = 0  # model çıktısında sınıf 0 = Normal (sağlıklı)
 
 # Sağlıksız pencere oranına (%) göre seviye bantları: (üst sınır, seviye adı)
 LEVELS = [
@@ -41,7 +41,7 @@ FAULT_TYPES = {
     "Bilya": (2, 5, 8),
     "Dış halka": (3, 6, 9),
 }
-TYPE_MIN_PERCENT = 30   # arıza türü, "Olası arıza" seviyesinden itibaren gösterilir
+TYPE_MIN_PERCENT = 30  # arıza türü, "Olası arıza" seviyesinden itibaren gösterilir
 
 
 def load_signal(path):
@@ -60,7 +60,7 @@ def make_windows(signal):
             f"Sinyal çok kısa: {len(signal)} örnek, en az {WINDOW} gerekli."
         )
     starts = range(0, len(signal) - WINDOW + 1, STRIDE)
-    return [signal[s : s + WINDOW] for s in starts]
+    return [signal[s: s + WINDOW] for s in starts]
 
 
 def predict_windows(model, windows):
@@ -68,7 +68,7 @@ def predict_windows(model, windows):
     preds = []
     with torch.no_grad():
         for i in range(0, len(windows), BATCH):
-            chunk = windows[i : i + BATCH]
+            chunk = windows[i: i + BATCH]
             batch = torch.cat([preprocess_cwru(w) for w in chunk], dim=0)
             logits = model(batch, task="cls")
             preds.append(logits.argmax(dim=-1))
@@ -93,6 +93,49 @@ def dominant_fault_type(preds):
     return name, 100 * counts[name] / len(unhealthy)
 
 
+def analyze_file(mat_path):
+    """Verilen .mat dosyasını analiz eder ve sonuçları sözlük olarak döndürür.
+     Mevcut fonksiyonları sırayla çalıştırır:
+    - load_signal()
+    - make_windows()
+    - load_model()
+    - predict_windows()
+    - get_level()
+    """
+
+    path = Path(mat_path)
+    if not path.is_file():
+        raise FileNotFoundError(f"Dosya bulunamadı: {path}")
+
+    signal = load_signal(path)
+    windows = make_windows(signal)
+    model = load_model(str(MODEL_DIR), variant="cwru")
+    preds = predict_windows(model, windows)
+
+    n_total = len(preds)
+    n_unhealthy = int((preds != HEALTHY_CLASS).sum())
+    percent = 100 * n_unhealthy / n_total
+    level = get_level(percent)
+
+    fault = None
+    share = None
+
+    if percent >= TYPE_MIN_PERCENT:
+        fault, share = dominant_fault_type(preds)
+
+    return {
+        "file_name": path.name,
+        "n_total": n_total,
+        "n_unhealthy": n_unhealthy,
+        "n_healthy": n_total - n_unhealthy,
+        "percent": percent,
+        "level": level,
+        "fault_name": fault,
+        "fault_share": share,
+        "preds": preds.cpu().numpy(),
+    }
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument(
@@ -112,23 +155,16 @@ def main():
     if not args.mat_file.is_file():
         raise SystemExit(f"Dosya bulunamadı: {args.mat_file}")
 
-    signal = load_signal(args.mat_file)
-    windows = make_windows(signal)
-    model = load_model(str(MODEL_DIR), variant="cwru")
-    preds = predict_windows(model, windows)
+    result = analyze_file(args.mat_file)
 
-    n_total = len(preds)
-    n_unhealthy = int((preds != HEALTHY_CLASS).sum())
-    percent = 100 * n_unhealthy / n_total
+    print(f"Dosya                   : {result['file_name']}")
+    print(f"Sağlıksız pencere oranı : %{result['percent']:.1f}")
+    print(f"Seviye                  : {result['level']}")
 
-    print(f"Dosya                   : {args.mat_file.name}")
-    print(f"Sağlıksız pencere oranı : %{percent:.1f}")
-    print(f"Seviye                  : {get_level(percent)}")
-    if percent >= TYPE_MIN_PERCENT:
-        fault, share = dominant_fault_type(preds)
+    if result["fault_name"] is not None:
         print(
-            f"En olası arıza türü     : {fault} "
-            f"[sağlıksız pencerelerdeki payı: %{share:.1f}]"
+            f"En olası arıza türü     : {result['fault_name']} "
+            f"[sağlıksız pencerelerdeki payı: %{result['fault_share']:.1f}]"
         )
 
 
