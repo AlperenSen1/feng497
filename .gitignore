@@ -8,3 +8,11 @@ data/
 
 # FELA-PdM modeli (Hugging Face'ten indirilir)
 fela-pdm/
+
+# IDE ve editör dosyaları
+.idea/
+.vscode/
+
+# Sistem ve geçici dosyalar
+Thumbs.db
+*.mat
